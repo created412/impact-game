@@ -305,7 +305,7 @@ function makeCode(){
   const c3=r<10?String(r):String.fromCharCode(65+(r-10));
   const c5=String(SC.act2.defendants.findIndex(d=>d.id===S.act2.blameOrder[0])+1);
   const sc={leningrad:"L",korea:"K",vietnam:"V"}[S.scn]||"X";
-  return `${sc}${S.act2.myName?"N":"-"}${alives().length}${tm[topTag()]}${c3}${S.act2.score}${c5}${S.act2.memorial}`;
+  return `${sc}${alives().length}${tm[topTag()]}${c3}${S.act2.score}${c5}${S.act2.memorial}`;
 }
 function tagBar(k){ const mx=Math.max(8,S.tags.sol,S.tags.rec,S.tags.sur,S.tags.sil);
   return `<div class="tagbar"><span class="tn">${TAGNAME[k]}</span>
@@ -354,17 +354,6 @@ window.showRecord=function(){
         같은 종이, 같은 이름, 다른 손.
       </div>
 
-      <div class="askname" id="askName">
-        <div class="q">당신이 역사에 적어야 할 이름은 무엇입니까?</div>
-        <div class="hintx">사람의 이름이어도, 사건의 이름이어도, 아직 아무도 부르지 않은 이름이어도 좋습니다.<br>
-          이 명부의 마지막 줄은 비어 있습니다.</div>
-        <div class="row">
-          <input id="nameIn" maxlength="28" placeholder="여기에 적으십시오"
-                 onkeydown="if(event.key==='Enter')writeName()">
-          <button onclick="writeName()">명부에 적는다</button>
-        </div>
-      </div>
-
       <div class="codebox">${makeCode()}</div>
       <div class="codelbl">나의 명부 코드 — 선생님이 안내하는 곳에 입력하세요</div>
     </div>
@@ -376,20 +365,6 @@ window.showRecord=function(){
       <button onclick="window.print()">인쇄 / PDF로 저장</button>
       <button onclick="backToSelect()">다른 시나리오</button>
       <button class="btn-go" onclick="restartGame()">다시 하기</button></div>`);
-  setTimeout(()=>{ const el=document.getElementById("nameIn"); if(el) el.focus(); }, 120);
-};
-window.writeName=function(){
-  const el=document.getElementById("nameIn"); if(!el) return;
-  const v=(el.value||"").trim(); if(!v) { el.focus(); return; }
-  S.act2.myName=v; snd.chime();
-  document.getElementById("askName").innerHTML =
-    `<div class="written">
-       <div class="wn">${v}</div>
-       <div class="wt">당신이 적었습니다.<br>
-         적힌 것은 남고, 적히지 않은 것은 <b>증명되지 않습니다</b>.<br>
-         이 이름을 누가, 어디에, 어떻게 새길지는 이제 당신들이 정합니다.</div>
-     </div>`;
-  notice("✍", "명부에 적혔다", v, "good");
 };
 window.restartGame=function(){ A2.style.display="none";
   document.getElementById("wrap").style.display="flex";

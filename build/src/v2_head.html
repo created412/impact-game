@@ -428,6 +428,49 @@
   .memcard .flag.ev{background:#3c5a3c;} .memcard .flag.dim{background:#6b5a4a;}
 
 
+
+  /* ================= 서로 어긋나는 자료 ================= */
+  .docwrap{margin:14px 0 4px;padding:14px 15px;border:1px solid #4a4438;border-radius:6px;
+    background:rgba(40,36,28,.5);}
+  .dochead{font-size:11px;letter-spacing:4px;color:var(--sepia);margin-bottom:11px;}
+  .dochead span{display:block;margin-top:5px;font-size:11.5px;letter-spacing:0;color:var(--ink-dim);}
+  .docgrid{display:grid;gap:8px;}
+  .doccard{border:1px solid var(--line);border-radius:5px;background:#191c1f;overflow:hidden;
+    transition:border-color .18s;}
+  .doccard.open{border-color:#5a5445;}
+  .doccard.picked{border-color:var(--warn);box-shadow:0 0 0 2px rgba(224,162,58,.24);}
+  .doccard .dtop{display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+    padding:11px 13px;background:transparent;border:0;}
+  .doccard .dtop:hover{background:rgba(255,255,255,.04);}
+  .dkind{flex:0 0 auto;font-size:10px;letter-spacing:1px;color:#0d0f10;background:var(--sepia);
+    border-radius:3px;padding:3px 7px;}
+  .doccard .dtop b{flex:1 1 auto;font-size:14px;color:#ece6d6;font-weight:600;}
+  .dmore{flex:0 0 auto;font-style:normal;font-size:11.5px;color:var(--ink-dim);}
+  .dbody{padding:0 14px 13px;font-size:13.5px;line-height:1.75;color:#cfc8ba;
+    border-top:1px dotted #3a3630;padding-top:11px;margin:0 0 0;}
+  .dbody .cite{display:block;font-size:11px;color:var(--ink-dim);margin-top:7px;font-style:italic;}
+  .dpick{margin-top:11px;font-size:12.5px;padding:7px 13px;background:#22262a;}
+  .dpick.on{background:#3a3320;border-color:var(--warn);color:var(--warn);}
+  .docask{margin-top:12px;font-size:15px;line-height:1.65;color:#ece6d6;font-weight:600;}
+  .docwarn{margin-top:8px;font-size:12.5px;color:var(--danger);}
+  .docok{margin-top:8px;font-size:12.5px;color:var(--ok);}
+  .chcard.locked{opacity:.4;cursor:not-allowed;filter:grayscale(.7);}
+  .chcard.locked:hover{transform:none;border-color:var(--line);box-shadow:none;}
+
+  /* ================= 그래서 어떻게 됐나 ================= */
+  .aftpic{position:relative;height:180px;background-size:cover;background-position:center;
+    filter:brightness(.9) saturate(.6);display:flex;align-items:flex-end;}
+  .aftpic span{position:absolute;inset:0;background:linear-gradient(180deg,
+    rgba(8,9,10,.2),rgba(8,9,10,.92));}
+  .aftpic b{position:relative;z-index:2;padding:0 18px 14px;font-size:17px;color:#f2ecdc;
+    text-shadow:0 2px 12px #000;}
+  .srcbox.real{border-left-color:var(--warn);background:#1d1b16;}
+  .realask{margin-top:12px;padding:12px 14px;border-left:3px solid var(--sepia);
+    background:rgba(255,255,255,.03);font-size:14px;line-height:1.7;color:#ece6d6;}
+  .dverdict{padding:10px 13px;border-radius:5px;font-size:13px;margin-bottom:11px;}
+  .dverdict.ok{background:#1f2b1f;color:#a9d3a9;border:1px solid #3c5a3c;}
+  .dverdict.bad{background:#2b1f1d;color:#e0a79f;border:1px solid #5a3c3c;}
+
   /* ================= 그림이 붙은 선택지 ================= */
   .choices.imgch{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;}
   .chcard{position:relative;display:block;padding:0;overflow:hidden;text-align:left;

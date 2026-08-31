@@ -87,6 +87,16 @@ const snd = (function(){
    배경음악 — 시나리오마다 다른 곡. 없으면 버튼이 숨는다.
    ========================================================================= */
 let bgm=null, bgmOn=true, bgmKey=null;
+/* 큰 mp3 는 data: URL 로 두면 크롬이 디코딩을 끝내지 못한다.
+   영상과 같은 이유로 Blob 으로 바꿔 쓴다. 한 번 만든 것은 재사용한다. */
+const _bgmUrl = {};
+function bgmBlobUrl(scn){
+  if(_bgmUrl[scn]) return Promise.resolve(_bgmUrl[scn]);
+  const src = BGM[scn];
+  return fetch(src).then(r=>r.blob())
+    .then(b=>{ _bgmUrl[scn] = URL.createObjectURL(b); return _bgmUrl[scn]; })
+    .catch(()=>src);
+}
 function setBgm(scn){
   const src = (typeof BGM!=="undefined") && BGM[scn];
   const btn = document.getElementById("btnMusic");
@@ -94,8 +104,13 @@ function setBgm(scn){
   if(btn) btn.style.display="";
   if(bgmKey===scn && bgm){ if(bgmOn) bgm.play().catch(()=>{}); return; }
   if(bgm) bgm.pause();
-  bgm = new Audio(src); bgm.loop=true; bgm.volume=0.40; bgmKey=scn;
-  if(bgmOn) bgm.play().catch(()=>{});
+  bgmKey = scn;
+  bgmBlobUrl(scn).then(u=>{
+    if(bgmKey !== scn) return;          /* 그새 시나리오가 바뀌었다 */
+    bgm = new Audio(u); bgm.loop=true; bgm.volume=0.40;
+    bgm.addEventListener("canplay", ()=>{ if(bgmOn) bgm.play().catch(()=>{}); });
+    if(bgmOn) bgm.play().catch(()=>{});
+  });
 }
 function setBgmOn(on){ bgmOn=on;
   if(!bgm) return; if(on) bgm.play().catch(()=>{}); else bgm.pause(); }
@@ -509,7 +524,7 @@ function newGame(scnId){
     build:{stove:false,bed:1,rain:false,barricade:0,hide:false,tunnelLink:false},
     survivors:SC.survivors.map(mkSurv), selected:0,
     tags:{sol:0,rec:0,sur:0,sil:0}, sus:{gov:0,nlf:0,smoke:0},
-    npc:{}, relics:[], choiceLog:[], sourcesRead:[], evidence:null,
+    npc:{}, relics:[], choiceLog:[], sourcesRead:[], docLog:[], evPick:{}, evidence:null,
     guard:-1, hidden:false, logLines:[], over:false, allDead:false, raid:null,
     act2:{submitted:[],withheld:[],score:0,blameOrder:[],memorial:null} };
   (SC.npc||[]).forEach(n=>{ S.npc[n.id]={bond:0,alive:true}; });
@@ -761,18 +776,30 @@ window.closeModal=closeModal;
 /* =========================================================================
    사건 — 삽화 + 증언 + 사료
    ========================================================================= */
-let _ev=null,_srcOpen=false;
-function eventOfDay(d){ return SC.events.find(e=>e.day===d); }
+let _ev=null,_srcOpen=false,_docOpen={},_docPick=null;
+/* 하루에 사건이 둘 있으면 그중 하나가 나온다 — 판마다 겪는 역사가 달라진다 */
+function eventOfDay(d){
+  const a = SC.events.find(e=>e.day===d);
+  const b = SC.events2 && SC.events2.find(e=>e.day===d);
+  if(!b) return a;
+  if(!a) return b;
+  if(S.evPick && S.evPick[d]) return S.evPick[d]==="b" ? b : a;
+  const use = Math.random()<0.5 ? "a" : "b";
+  if(S.evPick) S.evPick[d]=use;      /* 같은 날엔 늘 같은 사건이 나오게 고정 */
+  return use==="b" ? b : a;
+}
+/* 대체 사건의 선택지 그림 키는 kr01b_0 꼴 */
+function evSuffix(e){ return (SC.events2 && SC.events2.indexOf(e)>=0) ? "b" : ""; }
 function runEvent(){ const e=eventOfDay(S.day); if(!e){ updateCoach(); return; }
-  _ev=e; _srcOpen=false; paintEvent(); if(e.img) snd.wind(); }
+  _ev=e; _srcOpen=false; _docOpen={}; _docPick=null; paintEvent(); if(e.img) snd.wind(); }
 
 /* 선택지 그림 — 키는 ln01_0 꼴(시나리오·일차·선택 번호) */
-function chKey(day, i){
+function chKey(day, i, sfx){
   const p = (typeof SCN_PFX!=="undefined" && SCN_PFX[S.scn]) || "ln";
-  return p + String(day).padStart(2,"0") + "_" + i;
+  return p + String(day).padStart(2,"0") + (sfx||"") + "_" + i;
 }
-function chImg(day, i){
-  return (typeof CH_IMG!=="undefined" && CH_IMG[chKey(day,i)]) || "";
+function chImg(day, i, sfx){
+  return (typeof CH_IMG!=="undefined" && CH_IMG[chKey(day,i,sfx)]) || "";
 }
 function paintEvent(){
   const e=_ev;
@@ -789,12 +816,38 @@ function paintEvent(){
     h+=`<div class="srcbox"><span class="lbl">사 료</span>${e.src.tx}<span class="cite">— ${e.src.cite}</span></div>`;
     if(e.ch.some(c=>c.unlock)) h+=`<div class="unlocknote">▸ 새로운 선택지가 열렸습니다.</div>`;
   }
+  /* ── 서로 어긋나는 자료 ── */
+  if(e.docs && e.docs.length){
+    h+=`<div class="docwrap">
+      <div class="dochead">남 아 있 는 자 료 <span>서로 맞지 않습니다. 열어 보고 무엇을 근거로 삼을지 정하세요.</span></div>
+      <div class="docgrid">` +
+      e.docs.map((d,i)=>{
+        const open=!!_docOpen[i], pick=(_docPick===i);
+        return `<div class="doccard ${open?'open':''} ${pick?'picked':''}">
+          <button class="dtop" onclick="openDoc(${i})">
+            <span class="dkind">${d.kind||"자료"}</span>
+            <b>${d.label}</b>
+            ${open?"":`<i class="dmore">열어 본다 ▾</i>`}
+          </button>
+          ${open?`<div class="dbody">${d.tx}<span class="cite">— ${d.cite}</span>
+            <button class="dpick ${pick?'on':''}" onclick="pickDoc(${i})">
+              ${pick?"◉ 이 자료를 근거로 삼았다":"○ 이것을 근거로 삼는다"}</button></div>`:""}
+        </div>`; }).join("") +
+      `</div>
+      <div class="docask">${e.docAsk||"무엇을 근거로 결정하시겠습니까?"}</div>
+      ${_docPick===null
+        ? `<div class="docwarn">▸ 근거로 삼을 자료를 하나 고르기 전에는 결정할 수 없습니다.</div>`
+        : `<div class="docok">▸ <b>${e.docs[_docPick].label}</b>${JP(e.docs[_docPick].label,"을/를")} 근거로 삼았습니다.</div>`}
+    </div>`;
+  }
   h+=`<div class="choices imgch">`;
   e.ch.forEach((c,i)=>{
     if(c.unlock&&!_srcOpen) return;
     if(c.need&&!S.build[c.need]) return;
-    const u = chImg(e.day, i);
-    h+=`<button class="chcard ${c.unlock?'unlocked':''}" onclick="pickEvent(${i})">
+    const u = chImg(e.day, i, evSuffix(e));
+    const lock = (e.docs && e.docs.length && _docPick===null);
+    h+=`<button class="chcard ${c.unlock?'unlocked':''} ${lock?'locked':''}"
+        ${lock?'disabled':''} onclick="pickEvent(${i})">
       ${u?`<span class="chpic" style="background-image:url('${u}')"></span>`:'<span class="chpic none"></span>'}
       <span class="chtx">${c.x}${c.unlock?'<i class="chnew">떠올린 덕에 열린 길</i>':''}</span>
     </button>`;
@@ -802,6 +855,10 @@ function paintEvent(){
   h+=`</div></div>`;
   showModal(`${S.day}일차 — ${e.t}`,h);
 }
+window.openDoc=function(i){ _docOpen[i]=!_docOpen[i]; snd.click();
+  if(_docOpen[i]) addTags({rec:1});
+  paintEvent(); };
+window.pickDoc=function(i){ _docPick=i; snd.click(); paintEvent(); };
 window.openSource=function(){ _srcOpen=true; snd.click();
   if(!S.sourcesRead.includes(_ev.day)) S.sourcesRead.push(_ev.day);
   addTags({rec:1}); paintEvent(); };
@@ -872,6 +929,25 @@ function showOutcome(title, before, opt){
 }
 window.showOutcome = showOutcome;
 
+
+/* 게임의 결과 옆에 역사의 결과를 나란히 놓는다 */
+function showAftermath(ev, c, i, doc){
+  if(S.over) return;
+  const pic = chImg(ev.day, i, evSuffix(ev));
+  const judge = doc ? (doc.sound
+      ? `<div class="dverdict ok">당신이 근거로 삼은 <b>${doc.label}</b>은(는) 사실에 가까웠습니다.</div>`
+      : `<div class="dverdict bad">당신이 근거로 삼은 <b>${doc.label}</b>은(는) 그대로 믿을 수 있는 자료가 아니었습니다.</div>`) : "";
+  showModal(`${ev.day}일차 — 그래서 어떻게 됐나`, `
+    ${pic?`<div class="aftpic" style="background-image:url('${pic}')"><span></span>
+      <b>${c.x}</b></div>`:""}
+    <div class="pad">
+      ${judge}
+      <div class="srcbox real"><span class="lbl">실 제 로 는</span>${ev.real.tx}
+        <span class="cite">— ${ev.real.cite}</span></div>
+      ${ev.real.ask?`<div class="realask">${ev.real.ask}</div>`:""}
+      <div class="rowbtns"><button class="btn-go" onclick="closeModal()">계속 ▸</button></div>
+    </div>`);
+}
 window.pickEvent=function(i){
   const e=_ev,c=e.ch[i]; if(!c) return;
   const before=snapState();
@@ -880,7 +956,10 @@ window.pickEvent=function(i){
   if(c.evidence) S.evidence=c.evidence;
   if(c.npc&&S.npc[c.npc]) S.npc[c.npc].bond+=2;
   S.choiceLog.push({day:e.day,card:c.card,tags:c.tags||{}});
+  const doc = (e.docs && _docPick!==null) ? e.docs[_docPick] : null;
+  if(doc) S.docLog.push({day:e.day, label:doc.label, sound:!!doc.sound});
   closeModal(); refreshAll(); updateCoach();
-  showOutcome("그 선택의 결과", before, {pic:chImg(e.day,i), line:c.card});
+  showOutcome("그 선택의 결과", before, {pic:chImg(e.day,i,evSuffix(e)), line:c.card});
+  if(e.real) setTimeout(()=>showAftermath(e, c, i, doc), 900);
   if(S.allDead) setTimeout(endAct1,700);
 };
