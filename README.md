@@ -3,7 +3,7 @@
 전쟁을 **겪은 사람의 자리**에서 12일을 살아내고, 그 뒤 수십 년 후로 가서
 그날에 대해 질문을 받는 역사 수업용 게임입니다.
 
-**▶ 바로 하기 — https://histo5731.github.io/impact-game/**
+**▶ 바로 하기 — https://created412.github.io/impact-game/**
 
 세 시나리오가 들어 있습니다.
 
