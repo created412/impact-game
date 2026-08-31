@@ -64,39 +64,37 @@ const NIGHT = document.getElementById("night");
 const NW = document.getElementById("nightWrap");
 let _nt = null;   /* 밤 진행 상태 */
 
+/* 밤도 아침 사건과 같은 무대를 쓴다 */
 function nightShow(bgUrl, loc, txt, choicesHtml, showRisk){
   const risk=_nt?clamp(_nt.risk,0,100):0;
-  NIGHT.style.display="flex";
-  NW.innerHTML=`
-    <div class="nbg" style="background-image:url('${bgUrl}')"></div>
-    <div class="nveil"></div>
+  NIGHT.style.display="none";
+  stageShow(`
+    <div class="stbg" style="background-image:url('${bgUrl}')"></div>
+    <div class="stveil"></div>
     ${(showRisk&&risk>55)?'<div class="scanline"></div>':""}
-    ${showRisk?`<div class="nrisk">위험 <span class="rb"><i style="width:${risk}%"></i></span></div>`:""}
-    <div class="npanel"><div class="ninner">
-      <div class="nloc">${loc||"밤"}</div>
-      <p class="ntxt">${txt}</p>
-      <div class="nchoices">${choicesHtml}</div>
-    </div></div>`;
+    <div class="sthead"><span class="stday">밤</span><h2 class="sttitle">${loc||"밤이 왔다"}</h2>
+      ${showRisk?`<span class="strisk">위험 <span class="rb"><i style="width:${risk}%"></i></span></span>`:""}</div>
+    <div class="stbox"><div class="stline">${txt}</div></div>
+    <div class="stchoices night">${choicesHtml}</div>`);
 }
-function nightHide(){ NIGHT.style.display="none"; NW.innerHTML=""; narrStop(); }
+function nightHide(){ NIGHT.style.display="none"; stageHide(); }
 
 window.openNight=function(){
   if(S.over) return; snd.wind();
   const avail=SC.locations.filter(l=>S.day>=l.minDay);
   const btns=avail.map(l=>{
     const [rw,rc]=RISK_W[l.risk]||RISK_W[1];
-    return `<button class="loccard" onclick="nightPickLoc('${l.id}')">
-      <span class="lcart" style="background-image:url('${locArt(l)}')"></span>
-      <span class="lcsh"></span>
+    return `<button class="stcard" onclick="nightPickLoc('${l.id}')">
+      <span class="cp wide" style="background-image:url('${locArt(l)}')"></span>
       <span class="lcrisk" style="color:${rc};border-color:${rc}55">위험 ${rw}<i>${"●".repeat(l.risk)}</i></span>
-      <span class="lctx"><b>${l.name}</b><em>${l.note}</em></span>
+      <span class="ct"><b>${l.name}</b><i>${l.note}</i></span>
     </button>`;}).join("");
   const gname=(S.guard>=0&&S.survivors[S.guard]&&S.survivors[S.guard].alive)?S.survivors[S.guard].name:"없음";
   _nt={risk:0};
   nightShow(nightBg(), "밤이 왔다",
     `한 사람을 밖으로 내보낸다. 나머지는 집에 남는다.<br>
      <span style="font-size:13px;color:var(--ink-dim)">집을 지키는 사람: <b style="color:var(--warn)">${gname}</b></span>`,
-    btns + `<button class="nback" onclick="nightCancel()">아직 낮이다 — 돌아가기</button>`,
+    btns + `<button class="stback" onclick="nightCancel()">아직 낮이다 — 돌아가기</button>`,
     false);
 };
 window.nightCancel=function(){ nightHide(); _nt=null; };
@@ -106,10 +104,9 @@ window.nightPickLoc=function(id){
   const btns=S.survivors.map((s,i)=>{ if(!s.alive) return "";
     const bad=s.health<45||s.fatigue<30;
     const hc=s.health<45?"#d2503a":"#6fae6f", fc=s.fatigue<30?"#d2503a":"#d2a04a";
-    return `<button class="scard" onclick="nightPickScout(${i})">
-      <span class="scpit">${scoutPortrait(s.sk,104)}</span>
-      <span class="sctx">
-        <b>${s.name}</b><span class="sctr">${s.trait||""}</span>
+    return `<button class="stcard person ${bad?'risky':''}" onclick="nightPickScout(${i})">
+      <span class="pfig">${scoutPortrait(s.sk,130)}</span>
+      <span class="ct"><b>${s.name}</b><i>${s.trait||""}</i>
         <span class="scbar"><em>체력</em><span class="pb"><i style="width:${Math.round(s.health)}%;background:${hc}"></i></span></span>
         <span class="scbar"><em>피로</em><span class="pb"><i style="width:${Math.round(s.fatigue)}%;background:${fc}"></i></span></span>
         ${bad?'<span class="scwarn">위험한 상태로 나선다</span>':''}
@@ -126,9 +123,9 @@ window.nightPickScout=function(i){
   const np = (typeof SCN_PFX!=="undefined" && SCN_PFX[S.scn]) || "ln";
   const btns=b.ch.map((c,k)=>{
     const u=(typeof CH_IMG!=="undefined" && CH_IMG[`${np}_b${bi}_${k}`])||"";
-    return `<button class="bcard ${u?'haspic':''}" onclick="nightBeat(${k})">
-      ${u?`<span class="bcpic" style="background-image:url('${u}')"></span>`:""}
-      <span class="bcx">${c.x}</span><span class="bcar">▸</span></button>`;}).join("");
+    return `<button class="stcard" onclick="nightBeat(${k})">
+      ${u?`<span class="cp wide" style="background-image:url('${u}')"></span>`:""}
+      <span class="ct">${c.x}</span></button>`;}).join("");
   nightShow(locArt(_nt.loc), _nt.loc.name,
     `<b>${s.name}</b>${JP(s.name,"이/가")} 어둠 속으로 나섰다.<br><br>${b.tx}`, btns, true);
 };
@@ -140,7 +137,7 @@ window.nightBeat=function(k){
   if(c.sus) for(const k in c.sus) S.sus[k]=clamp((S.sus[k]||0)+c.sus[k],0,100);
   _nt.beatNote=c.note;
   nightShow(locArt(_nt.loc), _nt.loc.name, c.note+"<br><br>이제 돌아갈 시간이다.",
-    `<button class="btn-go" onclick="nightResolve()">집으로 돌아간다 ▸</button>`, true);
+    `<button class="stback go" onclick="nightResolve()">집으로 돌아간다 ▸</button>`, true);
 };
 window.nightResolve=function(){
   const {loc,scout,risk,mult}=_nt;

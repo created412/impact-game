@@ -451,7 +451,7 @@
     font-family:"MyeongjoDisp","Nanum Myeongjo",serif;text-shadow:0 2px 14px #000;}
 
   /* 배우들이 서는 바닥 */
-  .stcast{position:relative;z-index:2;flex:1 1 auto;display:flex;align-items:flex-end;
+  .stcast{display:none;position:relative;z-index:2;flex:1 1 auto;align-items:flex-end;
     justify-content:center;gap:clamp(10px,4vw,64px);padding:0 24px 4px;min-height:0;}
   .stactor{display:flex;flex-direction:column;align-items:center;gap:7px;
     transition:filter .4s, transform .4s, opacity .4s;}
@@ -462,13 +462,19 @@
   .stactor.dim{filter:brightness(.42) saturate(.4);transform:translateY(3px) scale(.97);}
   .stactor.speak .nm{color:#0d0f10;background:var(--sepia);}
 
-  /* 대사 상자 */
-  .stbox{position:relative;z-index:3;flex:0 0 auto;margin:0 auto;width:min(100%,880px);
-    padding:0 20px 16px;}
+  /* 이야기 상자 — 한 화면에 다 보인다 */
+  .stbox{position:relative;z-index:3;flex:0 1 auto;margin:0 auto;width:min(100%,940px);
+    padding:0 20px 14px;min-height:0;display:flex;flex-direction:column;gap:9px;}
+  .stq{flex:0 0 auto;font-size:clamp(13px,1.4vw,15.5px);line-height:1.7;color:#d8d0be;
+    border-left:3px solid var(--sepia);padding:2px 0 2px 13px;}
+  .stq em{font-style:italic;}
+  .stq span{display:block;margin-top:5px;font-size:11.5px;color:var(--sepia);font-style:normal;}
+  .stwarn{align-self:center;font-size:12px;color:var(--danger);letter-spacing:1px;}
   .stquote{font-size:12px;letter-spacing:1px;color:var(--sepia);margin-bottom:7px;}
-  .stline{background:rgba(12,14,16,.9);border:1px solid var(--line);border-radius:8px;
-    padding:16px 20px;font-size:clamp(14px,1.55vw,17px);line-height:1.75;color:#ece6d6;
-    max-height:30vh;overflow-y:auto;box-shadow:0 12px 34px rgba(0,0,0,.6);}
+  .stline{flex:0 1 auto;min-height:0;overflow-y:auto;
+    background:rgba(12,14,16,.9);border:1px solid var(--line);border-radius:8px;
+    padding:15px 19px;font-size:clamp(14px,1.5vw,16.5px);line-height:1.75;color:#ece6d6;
+    box-shadow:0 12px 34px rgba(0,0,0,.6);}
   .stline em{font-style:italic;color:#cfc7b6;}
   .stnext{display:flex;align-items:center;justify-content:space-between;gap:10px;
     margin-top:9px;}
@@ -480,27 +486,58 @@
   @keyframes stblink{0%,100%{opacity:.45}50%{opacity:1}}
 
   /* 선택지 — 한 판에 들어온다 */
-  .stchoices{position:relative;z-index:3;flex:0 0 auto;display:grid;gap:10px;
-    width:min(100%,1080px);margin:0 auto;padding:0 20px 18px;
-    grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
-    max-height:38vh;overflow-y:auto;}
+  .stchoices{position:relative;z-index:3;flex:0 0 auto;display:grid;gap:12px;
+    width:min(100%,1120px);margin:0 auto;padding:0 20px 18px;
+    grid-template-columns:repeat(auto-fit,minmax(230px,1fr));align-items:start;
+    justify-items:center;}
+  /* 선택지가 하나둘뿐일 때 카드가 화면 폭만큼 늘어나 그림이 커지는 것을 막는다 */
+  .stcard{width:100%;max-width:340px;}
+  .stchoices.night .stcard{max-width:360px;}
+  .stchoices.night{grid-template-columns:repeat(auto-fit,minmax(250px,1fr));}
+  .stback{grid-column:1/-1;background:transparent;border-color:#444;color:var(--ink-dim);
+    font-size:12.5px;letter-spacing:1px;}
+  .stback.go{background:var(--sepia);border-color:var(--sepia);color:#14161a;font-weight:700;}
+  /* 밤 인물 카드 */
+  .stcard.person{align-items:center;padding-top:10px;}
+  .stcard.person .pfig{display:flex;align-items:flex-end;justify-content:center;
+    height:clamp(96px,17vh,140px);filter:drop-shadow(0 8px 18px rgba(0,0,0,.8));}
+  .stcard.person .ct{width:100%;}
+  .stcard.person.risky{border-color:#6b3a34;}
+  .stcard .lcrisk{position:absolute;top:8px;right:8px;}
+  .scbar{display:flex;align-items:center;gap:6px;margin-top:5px;}
+  .scbar em{font-style:normal;font-size:10px;color:var(--ink-dim);flex:0 0 24px;}
+  .scbar .pb{flex:1 1 auto;height:5px;background:#22262a;border-radius:3px;overflow:hidden;}
+  .scbar .pb i{display:block;height:100%;}
+  .scwarn{display:block;margin-top:6px;font-size:10.5px;color:var(--danger);}
+  .strisk{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:11px;
+    color:var(--ink-dim);letter-spacing:1px;}
+  .strisk .rb{width:110px;height:7px;background:#22262a;border-radius:4px;overflow:hidden;}
+  .strisk .rb i{display:block;height:100%;
+    background:linear-gradient(90deg,#6fae6f,#e0a23a,#d2503a);transition:width .5s;}
   /* 선택지가 뜬 판 — 위쪽을 줄여 전부 한 화면에 담는다 */
   #scene.picking .sthead{padding:10px 24px 0;}
   #scene.picking .stcast{padding-bottom:0;}
   #scene.picking .stbox{padding-bottom:10px;}
-  #scene.picking .stline{max-height:16vh;padding:11px 17px;font-size:14px;}
-  #scene.picking .stcast{overflow:hidden;flex:1 1 0;min-height:0;}
-  #scene.picking .stactor{max-height:100%;}
-  #scene.picking .stchoices{max-height:34vh;padding-bottom:12px;}
-  #scene.picking .stcard .ct{padding:8px 11px 9px;font-size:13px;}
+  /* 세로가 짧은 화면에서는 카드 그림을 조금 낮춘다 */
+  @media(max-height:760px){
+    .sthead{padding:10px 24px 0;} .stbox{padding-bottom:10px;}
+    .stcard .cp{aspect-ratio:16/9;}
+    .stcard .ct{padding:9px 11px 10px;font-size:13px;}
+  }
+  @media(max-height:640px){
+    .stcard .cp{aspect-ratio:2/1;}
+    .stcard.person .pfig{height:clamp(72px,14vh,100px);}
+  }
   .stcard{position:relative;display:flex;flex-direction:column;padding:0;overflow:hidden;
     text-align:left;border:1px solid var(--line);border-radius:7px;background:#13161a;
     transition:border-color .18s, transform .18s, box-shadow .18s;}
   .stcard:hover:not(:disabled){border-color:var(--sepia);transform:translateY(-4px);
     box-shadow:0 12px 28px rgba(0,0,0,.65);}
-  .stcard .cp{display:block;height:clamp(54px,9vh,92px);background-size:cover;
-    background-position:center;filter:brightness(.84) contrast(1.08) saturate(.62);
+  /* 그림은 원본과 같은 3:2 — 잘리지 않는다 */
+  .stcard .cp{display:block;width:100%;aspect-ratio:3/2;background-size:cover;
+    background-position:center;filter:brightness(.86) contrast(1.08) saturate(.64);
     transition:filter .3s, transform .5s;}
+  .stcard .cp.wide{aspect-ratio:16/9;}
   .stcard:hover:not(:disabled) .cp{filter:brightness(1.04) saturate(.82);transform:scale(1.06);}
   .stcard .ct{display:block;padding:10px 12px 11px;font-size:13.5px;line-height:1.5;
     color:#ece6d6;}

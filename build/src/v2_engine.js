@@ -791,7 +791,7 @@ function eventOfDay(d){
 /* 대체 사건의 선택지 그림 키는 kr01b_0 꼴 */
 function evSuffix(e){ return (SC.events2 && SC.events2.indexOf(e)>=0) ? "b" : ""; }
 function runEvent(){ const e=eventOfDay(S.day); if(!e){ updateCoach(); return; }
-  _ev=e; _srcOpen=false; _docOpen={}; _docPick=null; _stStep=0; _stBeats=[];
+  _ev=e; _srcOpen=false; _docOpen={}; _docPick=null;
   paintEvent(); if(e.img) snd.wind(); }
 
 /* 선택지 그림 — 키는 ln01_0 꼴(시나리오·일차·선택 번호) */
@@ -848,61 +848,40 @@ window.stageHide = stageHide;
 
 function paintEvent(){
   const e = _ev;
-  if(!_stBeats.length) _stBeats = stageBeats(e);
-  const last = _stStep >= _stBeats.length - 1;
-  const bt = _stBeats[Math.min(_stStep, _stBeats.length-1)];
   const bg = (e.img && EVIMG[e.img]) || "";
-  /* 말하는 사람 — 인용은 바깥 목소리라 아무도 비추지 않는다 */
-  const spk = bt.quote ? -1 : (_stStep % Math.max(1, S.survivors.filter(s=>s.alive).length));
-
   const needDoc = !!(e.docs && e.docs.length && _docPick===null);
+
   const tools =
     `<div class="sttools">
       <button class="${_srcOpen?'done':''}" onclick="openSource()">🕯 ${_srcOpen?"사료를 떠올렸다":"그때 들은 이야기"}</button>
       ${e.docs&&e.docs.length ? `<button class="${needDoc?'need':'done'}" onclick="openDocs()">
         📜 남은 자료 ${e.docs.length}${needDoc?" — 근거를 고르세요":" · "+e.docs[_docPick].label}</button>` : ""}
+      ${needDoc?'<span class="stwarn">근거를 골라야 결정할 수 있습니다</span>':""}
     </div>`;
 
-  let body;
-  if(!last){
-    body = `<div class="stbox">
-      ${bt.quote?`<div class="stquote">— ${bt.by}</div>`:""}
-      <div class="stline">${bt.quote?"<em>“"+bt.say+"”</em>":bt.say}</div>
-      <div class="stnext">${tools}<span class="stgo">눌러서 계속 ▸</span></div>
-    </div>`;
-  } else {
-    const cards = e.ch.map((c,i)=>{
-      if(c.unlock && !_srcOpen) return "";
-      if(c.need && !S.build[c.need]) return "";
-      const u = chImg(e.day, i, evSuffix(e));
-      return `<button class="stcard ${c.unlock?'unlocked':''}" ${needDoc?'disabled':''}
-          onclick="pickEvent(${i})">
-        ${u?`<span class="cp" style="background-image:url('${u}')"></span>`:""}
-        <span class="ct">${c.x}${c.unlock?'<i>떠올린 덕에 열린 길</i>':''}</span></button>`;
-    }).join("");
-    body = `<div class="stbox">
-        <div class="stline">${bt.quote?"<em>“"+bt.say+"”</em>":bt.say}</div>
-        <div class="stnext">${tools}${needDoc?'<span class="stgo" style="color:var(--danger)">근거를 골라야 결정할 수 있습니다</span>':""}</div>
-      </div>
-      <div class="stchoices">${cards}</div>`;
-  }
+  const cards = e.ch.map((c,i)=>{
+    if(c.unlock && !_srcOpen) return "";
+    if(c.need && !S.build[c.need]) return "";
+    const u = chImg(e.day, i, evSuffix(e));
+    return `<button class="stcard ${c.unlock?'unlocked':''}" ${needDoc?'disabled':''}
+        onclick="pickEvent(${i})">
+      ${u?`<span class="cp" style="background-image:url('${u}')"></span>`:""}
+      <span class="ct">${c.x}${c.unlock?'<i>떠올린 덕에 열린 길</i>':''}</span></button>`;
+  }).join("");
 
-  STAGE.classList.toggle("picking", last);
   stageShow(`
     <div class="stbg" style="${bg?`background-image:url('${bg}')`:""}"></div>
     <div class="stveil"></div>
     <div class="sthead"><span class="stday">${e.day}일차</span><h2 class="sttitle">${e.t}</h2></div>
-    <div class="stcast" ${last?'':'onclick="stageNext()"'}>${stageCast(spk, last)}</div>
-    ${body}
+    <div class="stbox">
+      ${e.quote?`<div class="stq"><em>“${e.quote.tx}”</em><span>— ${e.quote.by}</span></div>`:""}
+      <div class="stline">${e.b}</div>
+      ${tools}
+    </div>
+    <div class="stchoices">${cards}</div>
     <div class="stpanel" id="stPanel"></div>`);
-  if(!last) STAGE.querySelector(".stbox").onclick = (ev)=>{
-    if(ev.target.closest("button")) return; stageNext();
-  };
-  narrate((bt.quote?"":"") + bt.say);
+  narrate((e.quote?e.quote.tx+". ":"") + e.b);
 }
-window.stageNext = function(){
-  if(_stStep < _stBeats.length-1){ _stStep++; snd.click(); paintEvent(); }
-};
 /* 덧창 — 사료와 자료는 무대를 늘리지 않고 위에 덮는다 */
 function stagePanel(html){
   const p = document.getElementById("stPanel");
