@@ -791,7 +791,8 @@ function eventOfDay(d){
 /* 대체 사건의 선택지 그림 키는 kr01b_0 꼴 */
 function evSuffix(e){ return (SC.events2 && SC.events2.indexOf(e)>=0) ? "b" : ""; }
 function runEvent(){ const e=eventOfDay(S.day); if(!e){ updateCoach(); return; }
-  _ev=e; _srcOpen=false; _docOpen={}; _docPick=null; paintEvent(); if(e.img) snd.wind(); }
+  _ev=e; _srcOpen=false; _docOpen={}; _docPick=null; _stStep=0; _stBeats=[];
+  paintEvent(); if(e.img) snd.wind(); }
 
 /* 선택지 그림 — 키는 ln01_0 꼴(시나리오·일차·선택 번호) */
 function chKey(day, i, sfx){
@@ -801,67 +802,151 @@ function chKey(day, i, sfx){
 function chImg(day, i, sfx){
   return (typeof CH_IMG!=="undefined" && CH_IMG[chKey(day,i,sfx)]) || "";
 }
-function paintEvent(){
-  const e=_ev;
-  let h="";
-  if(e.img&&EVIMG[e.img]) h+=`<div class="evimg"><img src="${EVIMG[e.img]}" alt="">
-    ${e.quote?`<div class="quote">“${e.quote.tx}”<small>— ${e.quote.by}</small></div>`:""}</div>`;
-  h+=`<div class="pad"><p>${e.b}</p>`;
-  /* 낭독은 아침 사건에만 — 인용 한 줄과 본문 */
-  narrate((e.quote?e.quote.tx+". ":"") + e.b);
-  if(!_srcOpen){
-    h+=`<button class="srcbtn" onclick="openSource()">🕯 <b>그때 들은 이야기를 떠올린다</b>
-      <span style="color:var(--ink-dim);font-size:11.5px">— 떠올리면 선택지가 하나 더 열립니다</span></button>`;
-  } else {
-    h+=`<div class="srcbox"><span class="lbl">사 료</span>${e.src.tx}<span class="cite">— ${e.src.cite}</span></div>`;
-    if(e.ch.some(c=>c.unlock)) h+=`<div class="unlocknote">▸ 새로운 선택지가 열렸습니다.</div>`;
-  }
-  /* ── 서로 어긋나는 자료 ── */
-  if(e.docs && e.docs.length){
-    h+=`<div class="docwrap">
-      <div class="dochead">남 아 있 는 자 료 <span>서로 맞지 않습니다. 열어 보고 무엇을 근거로 삼을지 정하세요.</span></div>
-      <div class="docgrid">` +
-      e.docs.map((d,i)=>{
-        const open=!!_docOpen[i], pick=(_docPick===i);
-        return `<div class="doccard ${open?'open':''} ${pick?'picked':''}">
-          <button class="dtop" onclick="openDoc(${i})">
-            <span class="dkind">${d.kind||"자료"}</span>
-            <b>${d.label}</b>
-            ${open?"":`<i class="dmore">열어 본다 ▾</i>`}
-          </button>
-          ${open?`<div class="dbody">${d.tx}<span class="cite">— ${d.cite}</span>
-            <button class="dpick ${pick?'on':''}" onclick="pickDoc(${i})">
-              ${pick?"◉ 이 자료를 근거로 삼았다":"○ 이것을 근거로 삼는다"}</button></div>`:""}
-        </div>`; }).join("") +
-      `</div>
-      <div class="docask">${e.docAsk||"무엇을 근거로 결정하시겠습니까?"}</div>
-      ${_docPick===null
-        ? `<div class="docwarn">▸ 근거로 삼을 자료를 하나 고르기 전에는 결정할 수 없습니다.</div>`
-        : `<div class="docok">▸ <b>${e.docs[_docPick].label}</b>${JP(e.docs[_docPick].label,"을/를")} 근거로 삼았습니다.</div>`}
-    </div>`;
-  }
-  h+=`<div class="choices imgch">`;
-  e.ch.forEach((c,i)=>{
-    if(c.unlock&&!_srcOpen) return;
-    if(c.need&&!S.build[c.need]) return;
-    const u = chImg(e.day, i, evSuffix(e));
-    const lock = (e.docs && e.docs.length && _docPick===null);
-    h+=`<button class="chcard ${c.unlock?'unlocked':''} ${lock?'locked':''}"
-        ${lock?'disabled':''} onclick="pickEvent(${i})">
-      ${u?`<span class="chpic" style="background-image:url('${u}')"></span>`:'<span class="chpic none"></span>'}
-      <span class="chtx">${c.x}${c.unlock?'<i class="chnew">떠올린 덕에 열린 길</i>':''}</span>
-    </button>`;
+/* =========================================================================
+   무대 — 인물이 배경 위에 서서 말하고, 선택지는 한 판에 들어온다
+   ========================================================================= */
+const STAGE = document.getElementById("scene");
+let _stStep = 0, _stBeats = [];
+
+/* 사건 하나를 '말하는 토막'들로 나눈다 */
+function stageBeats(ev){
+  const out = [];
+  if(ev.quote) out.push({say:ev.quote.tx, by:ev.quote.by, quote:true});
+  String(ev.b || "").split(/<br\s*\/?>/i).forEach(t=>{
+    t = t.trim(); if(t) out.push({say:t});
   });
-  h+=`</div></div>`;
-  showModal(`${S.day}일차 — ${e.t}`,h);
+  return out.length ? out : [{say:ev.t}];
 }
+/* 무대에 세울 사람들 — 살아 있는 식구 */
+function stageCast(speakIdx, tight){
+  const alive = S.survivors.filter(s=>s.alive);
+  if(!alive.length) return "";
+  /* 선택지가 뜬 판에서는 배우를 낮춰 화면 하나에 다 들어가게 한다 */
+  const vh = window.innerHeight;
+  const h = tight
+    ? Math.round(Math.max(66,  Math.min(124, vh*0.155)))
+    : Math.round(Math.max(120, Math.min(230, vh*0.30)));
+  return alive.map((s,i)=>{
+    const f = (typeof SPRITE_FR!=="undefined") &&
+      (SPRITE_FR[s.sk+"_idle"] || SPRITE_FR[s.sk+"_walk1"]);
+    const SW = sheetImg.naturalWidth, SH = sheetImg.naturalHeight;
+    let fig = "";
+    if(f && SW){
+      const sc = h / f[3];
+      fig = `<span class="fig" style="width:${Math.round(f[2]*sc)}px;height:${h}px;
+        background-size:${Math.round(SW*sc)}px ${Math.round(SH*sc)}px;
+        background-position:${-Math.round(f[0]*sc)}px ${-Math.round(f[1]*sc)}px"></span>`;
+    }
+    const on = (speakIdx===i);
+    return `<div class="stactor ${on?'speak':(speakIdx>=0?'dim':'')}">
+      ${fig}<span class="nm">${s.name}</span></div>`;
+  }).join("");
+}
+function stageShow(html){ STAGE.innerHTML = html; STAGE.classList.add("on"); }
+function stageHide(){ STAGE.classList.remove("on"); STAGE.innerHTML = ""; narrStop(); }
+window.stageHide = stageHide;
+
+function paintEvent(){
+  const e = _ev;
+  if(!_stBeats.length) _stBeats = stageBeats(e);
+  const last = _stStep >= _stBeats.length - 1;
+  const bt = _stBeats[Math.min(_stStep, _stBeats.length-1)];
+  const bg = (e.img && EVIMG[e.img]) || "";
+  /* 말하는 사람 — 인용은 바깥 목소리라 아무도 비추지 않는다 */
+  const spk = bt.quote ? -1 : (_stStep % Math.max(1, S.survivors.filter(s=>s.alive).length));
+
+  const needDoc = !!(e.docs && e.docs.length && _docPick===null);
+  const tools =
+    `<div class="sttools">
+      <button class="${_srcOpen?'done':''}" onclick="openSource()">🕯 ${_srcOpen?"사료를 떠올렸다":"그때 들은 이야기"}</button>
+      ${e.docs&&e.docs.length ? `<button class="${needDoc?'need':'done'}" onclick="openDocs()">
+        📜 남은 자료 ${e.docs.length}${needDoc?" — 근거를 고르세요":" · "+e.docs[_docPick].label}</button>` : ""}
+    </div>`;
+
+  let body;
+  if(!last){
+    body = `<div class="stbox">
+      ${bt.quote?`<div class="stquote">— ${bt.by}</div>`:""}
+      <div class="stline">${bt.quote?"<em>“"+bt.say+"”</em>":bt.say}</div>
+      <div class="stnext">${tools}<span class="stgo">눌러서 계속 ▸</span></div>
+    </div>`;
+  } else {
+    const cards = e.ch.map((c,i)=>{
+      if(c.unlock && !_srcOpen) return "";
+      if(c.need && !S.build[c.need]) return "";
+      const u = chImg(e.day, i, evSuffix(e));
+      return `<button class="stcard ${c.unlock?'unlocked':''}" ${needDoc?'disabled':''}
+          onclick="pickEvent(${i})">
+        ${u?`<span class="cp" style="background-image:url('${u}')"></span>`:""}
+        <span class="ct">${c.x}${c.unlock?'<i>떠올린 덕에 열린 길</i>':''}</span></button>`;
+    }).join("");
+    body = `<div class="stbox">
+        <div class="stline">${bt.quote?"<em>“"+bt.say+"”</em>":bt.say}</div>
+        <div class="stnext">${tools}${needDoc?'<span class="stgo" style="color:var(--danger)">근거를 골라야 결정할 수 있습니다</span>':""}</div>
+      </div>
+      <div class="stchoices">${cards}</div>`;
+  }
+
+  STAGE.classList.toggle("picking", last);
+  stageShow(`
+    <div class="stbg" style="${bg?`background-image:url('${bg}')`:""}"></div>
+    <div class="stveil"></div>
+    <div class="sthead"><span class="stday">${e.day}일차</span><h2 class="sttitle">${e.t}</h2></div>
+    <div class="stcast" ${last?'':'onclick="stageNext()"'}>${stageCast(spk, last)}</div>
+    ${body}
+    <div class="stpanel" id="stPanel"></div>`);
+  if(!last) STAGE.querySelector(".stbox").onclick = (ev)=>{
+    if(ev.target.closest("button")) return; stageNext();
+  };
+  narrate((bt.quote?"":"") + bt.say);
+}
+window.stageNext = function(){
+  if(_stStep < _stBeats.length-1){ _stStep++; snd.click(); paintEvent(); }
+};
+/* 덧창 — 사료와 자료는 무대를 늘리지 않고 위에 덮는다 */
+function stagePanel(html){
+  const p = document.getElementById("stPanel");
+  if(!p) return;
+  p.innerHTML = `<div class="pw">${html}</div>`;
+  p.classList.add("on");
+}
+window.closePanel = function(){
+  const p = document.getElementById("stPanel");
+  if(p){ p.classList.remove("on"); p.innerHTML=""; }
+};
+window.openDocs = function(){
+  const e=_ev; snd.click();
+  const cards = e.docs.map((d,i)=>{
+    const open=!!_docOpen[i], pick=(_docPick===i);
+    return `<div class="doccard ${open?'open':''} ${pick?'picked':''}">
+      <button class="dtop" onclick="openDoc(${i})">
+        <span class="dkind">${d.kind||"자료"}</span><b>${d.label}</b>
+        ${open?"":`<i class="dmore">열어 본다 ▾</i>`}</button>
+      ${open?`<div class="dbody">${d.tx}<span class="cite">— ${d.cite}</span>
+        <button class="dpick ${pick?'on':''}" onclick="pickDoc(${i})">
+          ${pick?"◉ 이 자료를 근거로 삼았다":"○ 이것을 근거로 삼는다"}</button></div>`:""}
+    </div>`; }).join("");
+  stagePanel(`<div class="ph"><b>남 아 있 는 자 료</b>
+      <button class="pclose" onclick="closePanel()">닫기 ✕</button></div>
+    <p class="ohint bad" style="margin:0 0 12px">서로 맞지 않습니다. 열어 보고 무엇을 근거로 삼을지 정하세요.</p>
+    <div class="docgrid">${cards}</div>
+    <div class="docask">${e.docAsk||"무엇을 근거로 결정하시겠습니까?"}</div>
+    ${_docPick===null?`<div class="docwarn">▸ 근거를 하나 골라야 결정할 수 있습니다.</div>`
+      :`<div class="docok">▸ <b>${e.docs[_docPick].label}</b>${JP(e.docs[_docPick].label,"을/를")} 근거로 삼았습니다.</div>`}`);
+};
 window.openDoc=function(i){ _docOpen[i]=!_docOpen[i]; snd.click();
   if(_docOpen[i]) addTags({rec:1});
-  paintEvent(); };
-window.pickDoc=function(i){ _docPick=i; snd.click(); paintEvent(); };
-window.openSource=function(){ _srcOpen=true; snd.click();
-  if(!S.sourcesRead.includes(_ev.day)) S.sourcesRead.push(_ev.day);
-  addTags({rec:1}); paintEvent(); };
+  paintEvent(); openDocs(); };
+window.pickDoc=function(i){ _docPick=i; snd.click(); paintEvent(); openDocs(); };
+window.openSource=function(){ const e=_ev; snd.click();
+  if(!_srcOpen){ _srcOpen=true;
+    if(!S.sourcesRead.includes(e.day)) S.sourcesRead.push(e.day);
+    addTags({rec:1}); }
+  paintEvent();
+  stagePanel(`<div class="ph"><b>사 료</b>
+      <button class="pclose" onclick="closePanel()">닫기 ✕</button></div>
+    <div class="srcbox">${e.src.tx}<span class="cite">— ${e.src.cite}</span></div>
+    ${e.ch.some(c=>c.unlock)?`<div class="unlocknote">▸ 새로운 선택지가 열렸습니다.</div>`:""}`); };
 
 /* =========================================================================
    선택의 결과를 눈에 보이게 — 고르기 전후를 견주어 바뀐 것만 띄운다
@@ -958,7 +1043,7 @@ window.pickEvent=function(i){
   S.choiceLog.push({day:e.day,card:c.card,tags:c.tags||{}});
   const doc = (e.docs && _docPick!==null) ? e.docs[_docPick] : null;
   if(doc) S.docLog.push({day:e.day, label:doc.label, sound:!!doc.sound});
-  closeModal(); refreshAll(); updateCoach();
+  closeModal(); stageHide(); refreshAll(); updateCoach();
   showOutcome("그 선택의 결과", before, {pic:chImg(e.day,i,evSuffix(e)), line:c.card});
   if(e.real) setTimeout(()=>showAftermath(e, c, i, doc), 900);
   if(S.allDead) setTimeout(endAct1,700);

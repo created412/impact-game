@@ -429,6 +429,101 @@
 
 
 
+
+  /* ================= 무대 — 사건 진행 ================= */
+  #scene{position:fixed;inset:0;z-index:72;display:none;overflow:hidden;background:#08090a;
+    flex-direction:column;}
+  #scene.on{display:flex;}
+  .stbg{position:absolute;inset:0;background-size:cover;background-position:center;
+    filter:brightness(.52) contrast(1.1) saturate(.55);
+    transform:scale(1.04);animation:stpush 18s ease-out forwards;}
+  @keyframes stpush{from{transform:scale(1.10)}to{transform:scale(1.0)}}
+  .stveil{position:absolute;inset:0;background:
+    radial-gradient(80% 70% at 50% 40%, rgba(0,0,0,0) 0%, rgba(6,7,8,.72) 100%),
+    linear-gradient(180deg, rgba(6,7,8,.80) 0%, rgba(6,7,8,0) 20%,
+      rgba(6,7,8,0) 42%, rgba(6,7,8,.94) 78%, rgba(6,7,8,.99) 100%);}
+
+  /* 머리글 */
+  .sthead{position:relative;z-index:3;display:flex;align-items:baseline;gap:14px;
+    padding:16px 24px 0;}
+  .stday{font-size:11px;letter-spacing:5px;color:var(--sepia);}
+  .sttitle{margin:0;font-size:clamp(19px,2.4vw,27px);letter-spacing:.5px;color:#f2ecdc;
+    font-family:"MyeongjoDisp","Nanum Myeongjo",serif;text-shadow:0 2px 14px #000;}
+
+  /* 배우들이 서는 바닥 */
+  .stcast{position:relative;z-index:2;flex:1 1 auto;display:flex;align-items:flex-end;
+    justify-content:center;gap:clamp(10px,4vw,64px);padding:0 24px 4px;min-height:0;}
+  .stactor{display:flex;flex-direction:column;align-items:center;gap:7px;
+    transition:filter .4s, transform .4s, opacity .4s;}
+  .stactor .fig{background-image:var(--sheet);background-repeat:no-repeat;display:block;
+    filter:drop-shadow(0 10px 22px rgba(0,0,0,.85));}
+  .stactor .nm{font-size:11.5px;letter-spacing:2px;color:#9c9484;
+    background:rgba(8,9,10,.6);border-radius:11px;padding:2px 10px;}
+  .stactor.dim{filter:brightness(.42) saturate(.4);transform:translateY(3px) scale(.97);}
+  .stactor.speak .nm{color:#0d0f10;background:var(--sepia);}
+
+  /* 대사 상자 */
+  .stbox{position:relative;z-index:3;flex:0 0 auto;margin:0 auto;width:min(100%,880px);
+    padding:0 20px 16px;}
+  .stquote{font-size:12px;letter-spacing:1px;color:var(--sepia);margin-bottom:7px;}
+  .stline{background:rgba(12,14,16,.9);border:1px solid var(--line);border-radius:8px;
+    padding:16px 20px;font-size:clamp(14px,1.55vw,17px);line-height:1.75;color:#ece6d6;
+    max-height:30vh;overflow-y:auto;box-shadow:0 12px 34px rgba(0,0,0,.6);}
+  .stline em{font-style:italic;color:#cfc7b6;}
+  .stnext{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    margin-top:9px;}
+  .sttools{display:flex;gap:8px;flex-wrap:wrap;}
+  .sttools button{font-size:12px;padding:7px 12px;min-height:0;background:rgba(30,34,38,.9);}
+  .sttools button.done{border-color:#3c5a3c;color:#9ec79e;}
+  .sttools button.need{border-color:var(--warn);color:var(--warn);}
+  .stgo{font-size:12.5px;letter-spacing:2px;color:var(--ink-dim);animation:stblink 1.8s infinite;}
+  @keyframes stblink{0%,100%{opacity:.45}50%{opacity:1}}
+
+  /* 선택지 — 한 판에 들어온다 */
+  .stchoices{position:relative;z-index:3;flex:0 0 auto;display:grid;gap:10px;
+    width:min(100%,1080px);margin:0 auto;padding:0 20px 18px;
+    grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+    max-height:38vh;overflow-y:auto;}
+  /* 선택지가 뜬 판 — 위쪽을 줄여 전부 한 화면에 담는다 */
+  #scene.picking .sthead{padding:10px 24px 0;}
+  #scene.picking .stcast{padding-bottom:0;}
+  #scene.picking .stbox{padding-bottom:10px;}
+  #scene.picking .stline{max-height:16vh;padding:11px 17px;font-size:14px;}
+  #scene.picking .stcast{overflow:hidden;flex:1 1 0;min-height:0;}
+  #scene.picking .stactor{max-height:100%;}
+  #scene.picking .stchoices{max-height:34vh;padding-bottom:12px;}
+  #scene.picking .stcard .ct{padding:8px 11px 9px;font-size:13px;}
+  .stcard{position:relative;display:flex;flex-direction:column;padding:0;overflow:hidden;
+    text-align:left;border:1px solid var(--line);border-radius:7px;background:#13161a;
+    transition:border-color .18s, transform .18s, box-shadow .18s;}
+  .stcard:hover:not(:disabled){border-color:var(--sepia);transform:translateY(-4px);
+    box-shadow:0 12px 28px rgba(0,0,0,.65);}
+  .stcard .cp{display:block;height:clamp(54px,9vh,92px);background-size:cover;
+    background-position:center;filter:brightness(.84) contrast(1.08) saturate(.62);
+    transition:filter .3s, transform .5s;}
+  .stcard:hover:not(:disabled) .cp{filter:brightness(1.04) saturate(.82);transform:scale(1.06);}
+  .stcard .ct{display:block;padding:10px 12px 11px;font-size:13.5px;line-height:1.5;
+    color:#ece6d6;}
+  .stcard .ct i{display:block;font-style:normal;font-size:11px;color:var(--sepia);margin-top:4px;}
+  .stcard.unlocked{border-color:#3c5a3c;}
+  .stcard:disabled{opacity:.4;filter:grayscale(.7);cursor:not-allowed;}
+
+  /* 사료·자료를 여는 덧창 — 무대를 늘리지 않는다 */
+  .stpanel{position:absolute;inset:0;z-index:6;display:none;background:rgba(6,7,8,.93);
+    padding:22px;overflow-y:auto;}
+  .stpanel.on{display:block;}
+  .stpanel .pw{max-width:820px;margin:0 auto;}
+  .stpanel .ph{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+    margin-bottom:14px;}
+  .stpanel .ph b{font-size:15px;letter-spacing:3px;color:var(--sepia);}
+  .stpanel .pclose{font-size:12px;padding:6px 13px;min-height:0;}
+  @media(max-width:720px){
+    .stcast{gap:6px;} .stline{max-height:26vh;font-size:13.5px;}
+    .stchoices{grid-template-columns:1fr;max-height:34vh;overflow-y:auto;}
+    .stcard{flex-direction:row;align-items:center;}
+    .stcard .cp{flex:0 0 88px;height:64px;}
+  }
+
   /* ================= 서로 어긋나는 자료 ================= */
   .docwrap{margin:14px 0 4px;padding:14px 15px;border:1px solid #4a4438;border-radius:6px;
     background:rgba(40,36,28,.5);}
@@ -771,6 +866,7 @@
   <div class="dph"></div><div class="dnote"></div>
 </div>
 <div id="notice"></div>
+<div id="scene"></div>
 <div id="night"><div class="nwrap" id="nightWrap"></div></div>
 <div id="overlay"><div class="modal" id="modal"><h2 id="mTitle"></h2><div class="body" id="mBody"></div></div></div>
 <div id="title">
