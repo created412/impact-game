@@ -1,0 +1,16 @@
+{
+  "app": {
+    "name": "명부(名簿)",
+    "url": "https://created412.github.io/impact-game/",
+    "stack": "정적 HTML"
+  },
+  "tracks": [
+    "security",
+    "edzip"
+  ],
+  "edzipCase": "A",
+  "teacher": {
+    "dormsHandle": ""
+  },
+  "ownershipConfirmed": true
+}
